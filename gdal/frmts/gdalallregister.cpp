@@ -554,6 +554,9 @@ void CPL_STDCALL GDALAllRegister()
     GDALRegister_HTTP();
 #endif
 
+#ifdef FRMT_python
+    GDALRegister_Python();
+#endif
 /* -------------------------------------------------------------------- */
 /*      Deregister any drivers explicitly marked as suppressed by the   */
 /*      GDAL_SKIP environment variable.                                 */

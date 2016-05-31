@@ -3205,6 +3205,13 @@ AC_SUBST(CURL_INC,    $CURL_INC)
 AC_SUBST(CURL_LIB,    $CURL_LIB)
 
 dnl ---------------------------------------------------------------------------
+dnl Check for Python.
+dnl ---------------------------------------------------------------------------
+AC_SUBST(PYTHON_LIB,    "-L/usr/lib/x86_64-linux-gnu -lpython2.7")
+AC_SUBST(PYTHON_INCLUDE,    "-I/usr/include/python2.7")
+
+
+dnl ---------------------------------------------------------------------------
 dnl Check for libxml2.
 dnl ---------------------------------------------------------------------------
 
