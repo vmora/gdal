@@ -36,7 +36,8 @@ INSTALL_DIR	= 	$(GDAL_ROOT)/install-sh -d
 LIBS	=	$(SDE_LIB) @LIBS@ $(KAK_LIBS) $(DWG_LIBS) $(CURL_LIB) \
 		$(MRSID_LIBS) $(MRSID_LIDAR_LIBS) $(ECW_LIBS) $(INGRES_LIB) \
 		$(PCIDSK_LIB) $(RASDAMAN_LIB) $(CHARLS_LIB) $(SOSI_LIB) \
-		$(OPENCL_LIB) $(JVM_LIB) $(LIBICONV) $(FGDB_LIB) $(LIBXML2_LIB) $(MONGODB_LIB)
+		$(OPENCL_LIB) $(JVM_LIB) $(LIBICONV) $(FGDB_LIB) \
+		$(LIBXML2_LIB) $(MONGODB_LIB) $(PYTHON_LIB)
 
 SSEFLAGS = @SSEFLAGS@
 HAVE_SSE_AT_COMPILE_TIME = @HAVE_SSE_AT_COMPILE_TIME@
@@ -341,6 +342,12 @@ CURL_LIB	=	@CURL_LIB@
 CURL_INC	=	@CURL_INC@
 
 #
+# Python
+#
+PYTHON_LIB	=	@PYTHON_LIB@
+PYTHON_INCLUDE	=	@PYTHON_INCLUDE@
+
+#
 # libjson-c
 #
 LIBJSONC_SETTING = @LIBJSONC_SETTING@
@@ -562,7 +569,7 @@ GDAL_FORMATS += nitf bmp airsar rs2 ilwis rmf leveller sgi srtmhgt
 GDAL_FORMATS += idrisi gsg ingr ers jaxapalsar dimap gff cosar pds adrg
 GDAL_FORMATS += coasp tsx terragen blx msgn til r northwood saga xyz hf2
 GDAL_FORMATS += kmlsuperoverlay ctg e00grid zmap ngsgeoid iris map cals
-GDAL_FORMATS += safe sentinel2
+GDAL_FORMATS += safe sentinel2 python
 GDAL_FORMATS += @OPT_GDAL_FORMATS@
 
 ifneq ($(PCIDSK_SETTING),no)
