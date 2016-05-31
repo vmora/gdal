@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <sstream>
+#include <iostream>
 
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 
@@ -45,20 +46,20 @@ GDALDataset *PythonDataset::Open( GDALOpenInfo * poOpenInfo )
     const std::string filename( poOpenInfo->pszFilename );
     RAII_PyObject pName( PyString_FromString( 
                 filename.substr( 0, filename.length() - 3 ).c_str() ) );
-    RAII_PyObject pModule( PyImport_Import( pName ) );
+    RAII_PyObject pModule( PyImport_Import( pName.get() ) );
     if ( PyErr_Occurred() || !pModule )
     {
         PyErr_Print();
         return NULL;
     }
-    RAII_PyObject pDict( PyModule_GetDict( pModule ) );
-    PyObject *pClass = PyDict_GetItemString(pDict, "GDALPluginDataset");
+    RAII_PyObject pDict( PyModule_GetDict( pModule.get() ) );
+    RAII_PyObject pClass( PyDict_GetItemString(pDict.get(), "GDALPluginDataset") );
     if ( PyErr_Occurred() || !pClass )
     {
         PyErr_Print();
         return NULL;
     }
-    RAII_PyObject pInstance( PyObject_CallObject(pClass, NULL) );
+    RAII_PyObject pInstance( PyObject_CallObject(pClass.get(), NULL) );
     if ( PyErr_Occurred() || !pInstance )
     {
         PyErr_Print();
@@ -67,12 +68,12 @@ GDALDataset *PythonDataset::Open( GDALOpenInfo * poOpenInfo )
     std::auto_ptr< PythonDataset > ds( new PythonDataset( pInstance.release() ) );
     
     const size_t nband = PyInt_AsLong(
-            RAII_PyObject( PyObject_CallMethod( ds->_class, "GetRasterCount", "()" ) ) );
+            RAII_PyObject( PyObject_CallMethod( ds->_class.get(), "GetRasterCount", NULL ) ).get() );
     for (size_t b=1; b<= nband; b++)
     {
         std::ostringstream bstr;
         bstr << b;
-        RAII_PyObject band( PyObject_CallMethod( ds->_class, "GetRasterBand", "(i)", 
+        RAII_PyObject band( PyObject_CallMethod( ds->_class.get(), "GetRasterBand", "(i)", 
                 bstr.str().c_str() ) );
         if ( PyErr_Occurred() || !band )
         {
@@ -82,24 +83,24 @@ GDALDataset *PythonDataset::Open( GDALOpenInfo * poOpenInfo )
             return NULL;
         }
 
-        RAII_PyObject data_type( PyObject_CallMethod( band, "GetRasterDataType", "()" ) );
-        if ( PyErr_Occurred() || !PyInt_Check( static_cast<PyObject *>( data_type ) ) )
+        RAII_PyObject data_type( PyObject_CallMethod( band.get(), "GetRasterDataType", NULL ) );
+        if ( PyErr_Occurred() || !PyInt_Check( data_type.get() ) )
         {
             PyErr_Print();
             CPLError( CE_Failure, CPLE_AppDefined,
                       "Python raster band GetRasterDataType returned non int\n" );
             return NULL;
         }
-        RAII_PyObject size_x( PyObject_CallMethod( band, "GetXSize", "()" ) );
-        if ( PyErr_Occurred() || !PyInt_Check( static_cast<PyObject *>( size_x ) ) )
+        RAII_PyObject size_x( PyObject_CallMethod( band.get(), "GetXSize", NULL ) );
+        if ( PyErr_Occurred() || !PyInt_Check( size_x.get() ) )
         {
             PyErr_Print();
             CPLError( CE_Failure, CPLE_AppDefined,
                       "Python raster band GetXSize returned non int\n" );
             return NULL;
         }
-        RAII_PyObject size_y( PyObject_CallMethod( band, "GetYSize", "()" ) );
-        if ( PyErr_Occurred() || !PyInt_Check( static_cast<PyObject *>( size_y ) ) )
+        RAII_PyObject size_y( PyObject_CallMethod( band.get(), "GetYSize", NULL ) );
+        if ( PyErr_Occurred() || !PyInt_Check( size_y.get() ) )
         {
             PyErr_Print();
             CPLError( CE_Failure, CPLE_AppDefined,
@@ -108,48 +109,48 @@ GDALDataset *PythonDataset::Open( GDALOpenInfo * poOpenInfo )
         }
 
         ds->SetBand( b, new PythonRasterBand( band.release(), ds.get(), b, 
-                    GDALDataType( PyInt_AsLong( data_type ) ), 
-                    PyInt_AsLong( size_x ), 
-                    PyInt_AsLong( size_y ) ) );
+                    GDALDataType( PyInt_AsLong( data_type.get() ) ), 
+                    PyInt_AsLong( size_x.get() ), 
+                    PyInt_AsLong( size_y.get() ) ) );
     }
 
     ds->_proj_ref = PyString_AsString( RAII_PyObject( 
-        PyObject_CallMethod( ds->_class, "GetProjectionRef", "()" ) ) );
+        PyObject_CallMethod( ds->_class.get(), "GetProjectionRef", NULL ) ).get() );
 
 
     return ds.release();
 }
 
-int PythonDataset::Identify( GDALOpenInfo * poOpenInfo )
+int PythonDataset::Identify( GDALOpenInfo * /*poOpenInfo*/ )
 {
-    /* init python interpreter, juste in case it's not been done before */
-    /* @note we do not need to call Py_Finalize */
-    Py_Initialize();
+    ///* init python interpreter, juste in case it's not been done before */
+    ///* @note we do not need to call Py_Finalize */
+    //Py_Initialize();
 
-    /** check the script is licit python code with the appropriate functions defined */
-    const std::string filename( poOpenInfo->pszFilename );
-    RAII_PyObject pName( PyString_FromString( 
-                filename.substr( 0, filename.length() - 3 ).c_str() ) );
-    RAII_PyObject pModule( PyImport_Import( pName ) );
-    if ( PyErr_Occurred() || !pModule )
-    {
-        PyErr_Print();
-        return FALSE;
-    }
-    RAII_PyObject pDict( PyModule_GetDict( pModule ) );
-    PyObject *pClass = PyDict_GetItemString(pDict, "GDALPluginDataset");
-    if ( PyErr_Occurred() || !pClass )
-    {
-        PyErr_Print();
-        return FALSE;
-    }
+    ///** check the script is licit python code with the appropriate functions defined */
+    //const std::string filename( poOpenInfo->pszFilename );
+    //RAII_PyObject pName( PyString_FromString( 
+    //            filename.substr( 0, filename.length() - 3 ).c_str() ) );
+    //RAII_PyObject pModule( PyImport_Import( pName.get() ) );
+    //if ( PyErr_Occurred() || !pModule )
+    //{
+    //    PyErr_Print();
+    //    return FALSE;
+    //}
+    //RAII_PyObject pDict( PyModule_GetDict( pModule.get() ) );
+    //RAII_PyObject pClass( PyDict_GetItemString( pDict.get(), "GDALPluginDataset") );
+    //if ( PyErr_Occurred() || !pClass )
+    //{
+    //    PyErr_Print();
+    //    return FALSE;
+    //}
     return TRUE;
 }
 
 CPLErr PythonDataset::GetGeoTransform( double * padfTransform )
 {
-    RAII_PyObject transfo( PyObject_CallMethod( _class, "GetGeoTransform", "()" ) );
-    size_t tupleSize = PyTuple_Size(transfo);
+    RAII_PyObject transfo( PyObject_CallMethod( _class.get(), "GetGeoTransform", NULL ) );
+    size_t tupleSize = PyTuple_Size( transfo.get() );
     if ( PyErr_Occurred() || tupleSize != 6 )
     {
         PyErr_Print();
@@ -159,9 +160,9 @@ CPLErr PythonDataset::GetGeoTransform( double * padfTransform )
         return CE_Failure;
     }
     for( size_t i=0; i < tupleSize; i++ ) {
-        RAII_PyObject tupleItem( PyTuple_GetItem( transfo, i ) );
-        if ( PyErr_Occurred() || ( !PyFloat_Check( tupleItem ) 
-                                && !PyInt_Check( static_cast<PyObject *>( tupleItem ) ) ) )
+        RAII_PyObject tupleItem( PyTuple_GetItem( transfo.get(), i ) );
+        if ( PyErr_Occurred() || ( !PyFloat_Check( tupleItem.get() ) 
+                                && !PyInt_Check( tupleItem.get() ) ) )
         {
             PyErr_Print();
             CPLError( CE_Failure, CPLE_AppDefined,
@@ -169,7 +170,7 @@ CPLErr PythonDataset::GetGeoTransform( double * padfTransform )
                       "non float values" );
             return CE_Failure;
         }
-        padfTransform[i] = PyFloat_AsDouble(tupleItem);
+        padfTransform[i] = PyFloat_AsDouble( tupleItem.get() );
     }
 
     return CE_None;
@@ -186,13 +187,38 @@ PythonRasterBand::PythonRasterBand( PyObject * class_, PythonDataset * ds, int o
     poDS = ds;
     nBand = one_based_index;
     eDataType = data_type;
-    nBlockXSize = size_x;
-    nBlockYSize = size_y;
+    nRasterXSize = size_x;
+    nRasterYSize = size_y;
+    nBlockXSize = 1;
+    nBlockYSize = 1;
+    nBlocksPerRow = size_x;
+    nBlocksPerColumn = size_y;
+    
 }
 
-CPLErr PythonRasterBand::IReadBlock( int, int, void * )
+CPLErr PythonRasterBand::IRasterIO( 
+        GDALRWFlag flag, int xOffset, int yOffset, int xSize, int ySize,
+                              void *buffer, int bufXSize, int bufYSize, GDALDataType dataType,
+                              GSpacing pixelSpacing, GSpacing lineSpacing, GDALRasterIOExtraArg* )
 {
+    PyObject_CallMethod( _class.get(), "RasterIO", "(iiiiiliiiii)",
+            flag, xOffset, yOffset, xSize, ySize, 
+            (long)buffer, bufXSize, bufYSize, dataType, 
+            pixelSpacing, lineSpacing );
+    if ( PyErr_Occurred() )
+    {
+        PyErr_Print();
+        return CE_Failure;
+    }
     return CE_None;
+}
+
+CPLErr PythonRasterBand::IReadBlock( int xBlock, int yBlock, void *block)
+{
+    std::cout << "PythonRasterBand::IReadBlock\n";
+    const int xOff = xBlock * nBlockXSize;
+    const int yOff = yBlock * nBlockYSize;
+    return RasterIO(GF_Read, xOff, yOff, nBlockXSize, nBlockYSize, block, nBlockXSize, nBlockYSize, eDataType, 0, 0, NULL );
 }
 
 

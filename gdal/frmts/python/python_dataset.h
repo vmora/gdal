@@ -23,9 +23,9 @@ struct RAII_PyObject
 
     ~RAII_PyObject() { if ( _obj ) Py_DECREF( _obj ); }
 
-    operator PyObject*() { return _obj; }
+    PyObject *get() { return _obj; }
 
-    operator bool() const { return _obj != NULL; }
+    operator bool() { return _obj != NULL; }
 
     PyObject *release()
     {
@@ -56,8 +56,13 @@ private :
 
 struct PythonRasterBand : public GDALRasterBand
 {
-    PythonRasterBand( PyObject * class_, PythonDataset * ds, int one_based_index, GDALDataType data_type, size_t size_x, size_t size_y);
+    PythonRasterBand( PyObject * class_, PythonDataset * ds, int one_based_index, 
+            GDALDataType data_type, size_t size_x, size_t size_y);
+    /* whatch out, this is readin one pixel at a time */
     CPLErr IReadBlock( int, int, void * );
+    
+    CPLErr IRasterIO(GDALRWFlag, int, int, int, int, void *, int, int, GDALDataType,
+                              GSpacing, GSpacing, GDALRasterIOExtraArg* psExtraArg=NULL );
 private :
     RAII_PyObject _class;
 };
